@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Frontend</title>
+</head>
+<body>
+    <h1>Welcome to my DevOps Project!</h1>
+    <p>This is the frontend running on Nginx.</p>
+    <p>The backend status will appear here:</p>
+    <pre id="backend-status"></pre>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('http://localhost:5000')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('backend-status').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    document.getElementById('backend-status').textContent = 'Error connecting to the backend: ' + error;
+                });
+        });
+    </script>
+</body>
+</html>
