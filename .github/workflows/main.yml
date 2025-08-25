@@ -1,46 +1,51 @@
 name: Push to Artifact Registry
 
-# Controls when the workflow will run
 on:
   push:
-    branches:
-      - main  # Set this to your default branch if it's not 'main'
+    branches: [ "main" ]
 
-# These environment variables will be used throughout the workflow
 env:
-  PROJECT_ID: 'i-agility-465314-p6'
-  REPOSITORY: 'backend'
-  REGION: 'us-central1'
-  IMAGE_NAME: 'test-app'
+  PROJECT_ID: i-agility-465314-p6
+  REPOSITORY: backend
+  REGION: us-central1
+  IMAGE_NAME: test-app
+  TAG: latest   # or ${{ github.sha }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: 'read'
-      id-token: 'write' # This is required for federated authentication
+      contents: read
+      id-token: write   # required for WIF
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step to authenticate to Google Cloud using the Workload Identity Pool
-      - name: 'Authenticate to Google Cloud'
+      - name: Authenticate to Google Cloud (WIF)
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: 'projects/225435158395/locations/global/workloadIdentityPools/github-actions-pool-v9/providers/github-actions-provider-v9'
           service_account: 'github-actions-v9@i-agility-465314-p6.iam.gserviceaccount.com'
 
-      # Step to set up Docker to authenticate with Artifact Registry
-      - name: 'Set up Docker with Artifact Registry'
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+      - name: Install gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: '>= 445.0.0'
 
-      # Step to build a simple Docker image
-      - name: 'Build Docker image'
-        run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest docker-app/.
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
-      # Step to push the Docker image to Artifact Registry
-      - name: 'Push Docker image to Artifact Registry'
+      # optional sanity check
+      - name: Who am I?
         run: |
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
+          gcloud auth list
+          gcloud config list
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${TAG} docker-app/.
+
+      - name: Push Docker image
+        run: |
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${TAG}
