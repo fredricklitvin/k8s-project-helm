@@ -24,6 +24,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Add a brief delay to give Google Cloud time to propagate the new resources
+      - name: 'Wait for API propagation'
+        run: sleep 30s
+
       # Step to authenticate to Google Cloud using the Workload Identity Pool
       - name: 'Authenticate to Google Cloud'
         uses: 'google-github-actions/auth@v2'
@@ -44,3 +48,4 @@ jobs:
       - name: 'Push Docker image to Artifact Registry'
         run: |
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
+
