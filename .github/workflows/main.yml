@@ -26,12 +26,11 @@ jobs:
 
       # Step to authenticate to Google Cloud using the Workload Identity Pool
       - name: 'Authenticate to Google Cloud'
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-actions-pool-v9/providers/github-actions-provider-v9'
-          service_account: 'sgithub-actions-v9@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
-          # Explicitly pass the audience to match the repository condition in Terraform
-          audience: 'https://github.com/fredricklitvin/k8s-project-helm'
+          workload_identity_provider: 'projects/225435153095/locations/global/workloadIdentityPools/github-actions-pool-v9/providers/github-actions-provider-v9'
+          service_account: 'github-actions-v9@i-agility-465314-p6.iam.gserviceaccount.com'
+          audience: 'https://github.com/fredricklitvin/k8s-project-helm' 
 
       # Step to set up Docker to authenticate with Artifact Registry
       - name: 'Set up Docker with Artifact Registry'
