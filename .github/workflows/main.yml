@@ -30,7 +30,6 @@ jobs:
         with:
           workload_identity_provider: 'projects/225435153095/locations/global/workloadIdentityPools/github-actions-pool-v9/providers/github-actions-provider-v9'
           service_account: 'github-actions-v9@i-agility-465314-p6.iam.gserviceaccount.com'
-          audience: 'https://github.com/fredricklitvin/k8s-project-helm' 
 
       # Step to set up Docker to authenticate with Artifact Registry
       - name: 'Set up Docker with Artifact Registry'
