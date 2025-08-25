@@ -25,8 +25,8 @@ jobs:
       uses: google-github-actions/auth@v2
       with:
         workload_identity_provider: 'projects/225435158395/locations/global/workloadIdentityPools/github-actions-pool-v9/providers/github-actions-provider-v9'
-        service_account: 'github-actions-v9@i-agility-465314-p6.iam.gserviceaccount.com'
-        # (no audience override)
+        service_account: 'sgithub-actions-v9@i-agility-465314-p6.iam.gserviceaccount.com'  # <-- add the 's'
+
 
     - name: Install gcloud
       uses: google-github-actions/setup-gcloud@v2
