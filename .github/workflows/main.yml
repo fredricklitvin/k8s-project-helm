@@ -16,36 +16,31 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # required for WIF
+      id-token: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud (WIF)
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: 'projects/225435158395/locations/global/workloadIdentityPools/github-actions-pool-v9/providers/github-actions-provider-v9'
-          service_account: 'github-actions-v9@i-agility-465314-p6.iam.gserviceaccount.com'
+    - name: Authenticate to Google Cloud (WIF)
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: 'projects/225435158395/locations/global/workloadIdentityPools/github-actions-pool-v9/providers/github-actions-provider-v9'
+        service_account: 'github-actions-v9@i-agility-465314-p6.iam.gserviceaccount.com'
+        # (no audience override)
 
-      - name: Install gcloud
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          version: '>= 445.0.0'
+    - name: Install gcloud
+      uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+    # 🔑 Explicit docker login using a short-lived access token
+    - name: Docker login to Artifact Registry
+      run: |
+        gcloud auth print-access-token | \
+        docker login -u oauth2accesstoken --password-stdin https://${{ env.REGION }}-docker.pkg.dev
 
-      # optional sanity check
-      - name: Who am I?
-        run: |
-          gcloud auth list
-          gcloud config list
+    - name: Build
+      run: |
+        docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} docker-app/.
 
-      - name: Build Docker image
-        run: |
-          docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${TAG} docker-app/.
-
-      - name: Push Docker image
-        run: |
-          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${TAG}
+    - name: Push
+      run: |
+        docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}}/${IMAGE_NAME}:${TAG}
