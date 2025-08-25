@@ -38,7 +38,7 @@ jobs:
       # Step to build a simple Docker image
       - name: 'Build Docker image'
         run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest .
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest docker-app/.
 
       # Step to push the Docker image to Artifact Registry
       - name: 'Push Docker image to Artifact Registry'
