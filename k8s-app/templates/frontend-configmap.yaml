@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Simple Frontend</title>
+    </head>
+    <body>
+      <h1>Welcome to my DevOps Project!</h1>
+      <p>This is the frontend running on Nginx.</p>
+      <p>The backend status will appear here:</p>
+      <pre id="backend-status"></pre>
+
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          // Changed fetch URL to a relative path that Nginx can proxy
+          fetch('/api')
+            .then(response => response.json())
+            .then(data => {
+              document.getElementById('backend-status').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+              document.getElementById('backend-status').textContent = 'Error connecting to the backend: ' + error;
+            });
+        });
+      </script>
+    </body>
+    </html>
+  nginx.conf: |
+    events { }
+    http {
+      server {
+        listen 80;
+        location / {
+          root   /usr/share/nginx/html;
+          index  index.html index.htm;
+        }
+
+        location /api {
+          # The proxy_pass URL is changed to use the correct backend service name.
+          # A trailing slash is added to redirect the request to the root of the backend service.
+          proxy_pass http://backend-nodeport-service:5000/;
+        }
+      }
+    }
