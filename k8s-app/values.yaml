@@ -1,0 +1,9 @@
+namespace: default
+
+database:
+  dbUser: postgres
+  dbPassword: mysecretpassword
+  dbName: postgres
+  dbHost: postgres
+  dbPort: "5432"
+

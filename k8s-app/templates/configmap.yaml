@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: app
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+data:
+  POSTGRES_DB: {{ .Values.database.dbName }}
+  POSTGRES_USER: {{ .Values.database.dbUser }}
+  POSTGRES_PASSWORD: {{ .Values.database.dbPassword }}
+  DB_HOST: {{ .Release.Name }}-{{ .Values.database.dbHost }}
+  DB_PORT: {{ .Values.database.dbPort | quote }}
