@@ -1,7 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend-deployment
+  name: {{ .Release.Name }}-frontend-deployment
+  namespace: {{ .Values.namespace }}
   labels:
     app: frontend
 spec:
@@ -15,7 +16,7 @@ spec:
         app: frontend
     spec:
       containers:
-      - name: nginx-container
+      - name: {{ .Release.Name }}-nginx-container
         image: nginx:1.21
         ports:
         - containerPort: 80
@@ -29,4 +30,4 @@ spec:
       volumes:
       - name: nginx-config-volume
         configMap:
-          name: frontend-config
+          name: {{ .Release.Name }}-frontend-configmap

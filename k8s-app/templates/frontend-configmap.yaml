@@ -1,7 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: frontend-config
+  name: {{ .Release.Name }}-frontend-configmap
+  namespace: {{ .Values.namespace }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
 data:
@@ -45,7 +46,7 @@ data:
         location /api {
           # The proxy_pass URL is changed to use the correct backend service name.
           # A trailing slash is added to redirect the request to the root of the backend service.
-          proxy_pass http://backend-nodeport-service:5000/;
+          proxy_pass http://{{ .Release.Name }}-backend-service:5000/;
         }
       }
     }
