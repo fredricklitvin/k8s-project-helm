@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  # The namespace is used to group resources within a logical boundary.
+  namespace: {{ .Values.namespace }}
+spec:
+  # A StatefulSet ensures that each replica has a stable identity and storage.
+  selector:
+    matchLabels:
+      app: postgres
+  serviceName: postgres-service
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: 'postgres:14'
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-configmap
+          volumeMounts:
+            # The volumeMount points to the volume defined below.
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          # The volume is a `persistentVolumeClaim` which points to our PVC.
+          persistentVolumeClaim:
+            claimName: postgres-pvc

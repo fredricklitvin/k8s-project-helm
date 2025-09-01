@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  # This section tells the PVC to claim a specific PV by its name.
+  # This is what's known as "static provisioning."
+  volumeName: postgres-pv
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # This request must be less than or equal to the PV's capacity.
+      storage: 10Gi
