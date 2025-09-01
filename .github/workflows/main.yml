@@ -79,6 +79,6 @@ jobs:
         run: |
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
-          git add k8s-project-helm/k8s-app/values.yaml
+          git add k8s-app/values.yaml
           git commit -m "Automated: Update image tag to ${{ github.sha }}"
           git push
