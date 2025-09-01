@@ -2,14 +2,20 @@ name: Push to Artifact Registry
 
 on:
   push:
+    # This section ensures the workflow only runs when a change is pushed to the 'main' branch
+    # and specifically to the app.py file within the 'docker-app' directory.
     branches: [ "main" ]
+    paths:
+      - 'docker-app/app.py'
 
 env:
   PROJECT_ID: i-agility-465314-p6
   REPOSITORY: backend
   REGION: us-central1
   IMAGE_NAME: test-app
-  TAG: latest   # or ${{ github.sha }}
+  # Use the Git commit SHA as an immutable, unique tag for the Docker image.
+  # This is a best practice for traceability and reproducibility.
+  TAG: ${{ github.sha }}
 
 jobs:
   build-and-push:
@@ -19,28 +25,60 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout repository
+        # This checks out the code to build the image.
+        uses: actions/checkout@v4
 
-    - name: Authenticate to Google Cloud (WIF)
-      uses: google-github-actions/auth@v2
-      with:
-        workload_identity_provider: 'projects/225435158395/locations/global/workloadIdentityPools/github-actions-pool-v9/providers/github-actions-provider-v9'
-        service_account: 'sgithub-actions-v9@i-agility-465314-p6.iam.gserviceaccount.com'  # <-- add the 's'
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/225435158395/locations/global/workloadIdentityPools/github-actions-pool-v9/providers/github-actions-provider-v9'
+          service_account: 'sgithub-actions-v9@i-agility-465314-p6.iam.gserviceaccount.com'
 
+      - name: Install gcloud
+        uses: google-github-actions/setup-gcloud@v2
 
-    - name: Install gcloud
-      uses: google-github-actions/setup-gcloud@v2
+      - name: Docker login to Artifact Registry
+        run: |
+          gcloud auth print-access-token | \
+          docker login -u oauth2accesstoken --password-stdin https://${{ env.REGION }}-docker.pkg.dev
 
-    # 🔑 Explicit docker login using a short-lived access token
-    - name: Docker login to Artifact Registry
-      run: |
-        gcloud auth print-access-token | \
-        docker login -u oauth2accesstoken --password-stdin https://${{ env.REGION }}-docker.pkg.dev
+      - name: Build and tag Docker image
+        run: |
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} docker-app/.
 
-    - name: Build
-      run: |
-        docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} docker-app/.
+      - name: Push Docker image to Artifact Registry
+        run: |
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
 
-    - name: Push
-      run: |
-        docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${TAG}
+  update-helm-chart:
+    # This job only runs after the build-and-push job has completed successfully.
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      # We need write permissions to push the change back to the Git repository.
+      contents: write
+
+    steps:
+      - name: Checkout GitOps repository
+        # This checks out the repository that contains your Helm chart.
+        # This is where your ArgoCD is configured to watch for changes.
+        uses: actions/checkout@v4
+      
+      - name: Update image tag in values.yaml
+        # This uses 'yq', a command-line YAML processor, to update the image tag.
+        # This is a common and reliable way to programmatically edit YAML files in a CI/CD pipeline.
+        run: |
+          # The image tag path in values.yaml might look something like this.
+          # We are updating the 'tag' field to be the new, unique git SHA.
+          yq e '.image.tag = "${{ github.sha }}"' -i k8s-project-helm/k8s-app/values.yaml
+
+      - name: Commit and push changes
+        # This step commits the updated values.yaml file and pushes it back to the main branch.
+        # This is the "GitOps" part of the pipeline that ArgoCD will detect.
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add k8s-project-helm/k8s-app/values.yaml
+          git commit -m "Automated: Update image tag to ${{ github.sha }}"
+          git push
