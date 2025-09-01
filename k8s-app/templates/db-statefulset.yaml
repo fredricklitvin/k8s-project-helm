@@ -25,8 +25,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ .Release.Name }}-configmap
+          # This environment variable tells PostgreSQL to use a subdirectory
+          # within the mounted volume for its data.
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
-            # The volumeMount points to the volume defined below.
+            # The volumeMount now points to a new parent directory.
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
       volumes:
