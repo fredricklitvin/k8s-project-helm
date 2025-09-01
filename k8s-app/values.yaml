@@ -1,13 +1,10 @@
 namespace: default
-
 database:
   dbUser: postgres
   dbPassword: mysecretpassword
   dbName: postgres
   dbHost: postgres
   dbPort: "5432"
-
 image:
   repository: us-central1-docker.pkg.dev/i-agility-465314-p6/backend/test-app
-  tag: "latest"
-
+  tag: "318573c41099c30118c7e1a2e3346d8562e941b9"
