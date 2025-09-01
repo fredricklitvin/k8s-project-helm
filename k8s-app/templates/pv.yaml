@@ -17,3 +17,5 @@ spec:
   # The "Retain" policy is crucial for data safety.
   # This ensures the underlying disk is NOT deleted when the PV or PVC is removed.
   persistentVolumeReclaimPolicy: Retain
+  # This tells the PV that it belongs to the 'standard-rwo' StorageClass.
+  storageClassName: standard-rwo
