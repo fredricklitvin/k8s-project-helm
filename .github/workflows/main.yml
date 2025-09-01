@@ -71,7 +71,7 @@ jobs:
         run: |
           # The image tag path in values.yaml might look something like this.
           # We are updating the 'tag' field to be the new, unique git SHA.
-          yq e '.image.tag = "${{ github.sha }}"' -i k8s-project-helm/k8s-app/values.yaml
+          yq e '.image.tag = "${{ github.sha }}"' -i k8s-app/values.yaml
 
       - name: Commit and push changes
         # This step commits the updated values.yaml file and pushes it back to the main branch.
