@@ -7,3 +7,7 @@ database:
   dbHost: postgres
   dbPort: "5432"
 
+image:
+  repository: us-central1-docker.pkg.dev/i-agility-465314-p6/backend/test-app
+  tag: "latest"
+
