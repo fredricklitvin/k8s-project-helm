@@ -33,12 +33,12 @@ def setup_database():
         conn.commit()
         cur.close()
         conn.close()
+        print("Database setup complete.")
     except Exception as e:
         print(f"Error setting up database: {e}")
 
-@app.before_first_request
-def initialize_app():
-    setup_database()
+# Call the setup function when the application starts
+setup_database()
 
 @app.route('/')
 def home():
