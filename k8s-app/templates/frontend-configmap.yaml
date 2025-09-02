@@ -7,46 +7,125 @@ metadata:
     "helm.sh/hook": pre-install,pre-upgrade
 data:
   index.html: |
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Simple Frontend</title>
-    </head>
-    <body>
-      <h1>Welcome to my DevOps Project!</h1>
-      <p>This is the frontend running on Nginx.</p>
-      <p>The backend status will appear here:</p>
-      <pre id="backend-status"></pre>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Frontend</title>
+</head>
+<body>
+    <h1>Welcome to my DevOps Project!</h1>
+    <p>This is the frontend running on Nginx.</p>
+    <p>The backend status will appear here:</p>
+    <pre id="backend-status"></pre>
 
-      <script>
+    <h2>Add a New Name</h2>
+    <form id="add-name-form">
+        <label for="new-name">Name:</label>
+        <input type="text" id="new-name" name="new-name" required>
+        <button type="submit">Add Name</button>
+    </form>
+
+    <h2>List of Names</h2>
+    <ul id="names-list"></ul>
+
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
-          // Changed fetch URL to a relative path that Nginx can proxy
-          fetch('/api')
-            .then(response => response.json())
-            .then(data => {
-              document.getElementById('backend-status').textContent = JSON.stringify(data, null, 2);
-            })
-            .catch(error => {
-              document.getElementById('backend-status').textContent = 'Error connecting to the backend: ' + error;
+            const backendStatusElement = document.getElementById('backend-status');
+            const addNameForm = document.getElementById('add-name-form');
+            const namesListElement = document.getElementById('names-list');
+
+            // Function to fetch and display the list of names
+            function fetchNames() {
+                fetch('/names')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.names) {
+                            namesListElement.innerHTML = ''; // Clear previous list
+                            data.names.forEach(name => {
+                                const li = document.createElement('li');
+                                li.textContent = name;
+                                namesListElement.appendChild(li);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching names:', error);
+                        namesListElement.innerHTML = '<li>Error fetching names.</li>';
+                    });
+            }
+
+            // Fetch backend status
+            fetch('/')
+                .then(response => response.json())
+                .then(data => {
+                    backendStatusElement.textContent = JSON.stringify(data, null, 2);
+                    if (data.status === "success") {
+                        // If backend is up, fetch the names
+                        fetchNames();
+                    }
+                })
+                .catch(error => {
+                    backendStatusElement.textContent = 'Error connecting to the backend: ' + error;
+                });
+
+            // Handle form submission to add a new name
+            addNameForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+                const newName = document.getElementById('new-name').value;
+                
+                fetch('/add_name', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: newName })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message); // Use alert for simplicity, a modal would be better
+                    if (data.status === "success") {
+                        fetchNames(); // Refresh the list of names
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding name:', error);
+                    alert('Error adding name.');
+                });
             });
         });
-      </script>
-    </body>
-    </html>
+    </script>
+</body>
+</html>
+
   nginx.conf: |
-    events { }
-    http {
-      server {
+events {
+    worker_connections  1024;
+}
+
+http {
+    server {
         listen 80;
+
         location / {
-          root   /usr/share/nginx/html;
-          index  index.html index.htm;
+            root   /usr/share/nginx/html;
+            index  index.html index.htm;
+            try_files $uri $uri/ /index.html;
         }
 
-        location /api {
-          # The proxy_pass URL is changed to use the correct backend service name.
-          # A trailing slash is added to redirect the request to the root of the backend service.
-          proxy_pass http://{{ .Release.Name }}-backend-service:5000/;
+        location /add_name {
+            proxy_pass http://{{ .Release.Name }}-backend-service:5000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
         }
-      }
+        
+        location /names {
+            proxy_pass http://{{ .Release.Name }}-backend-service:5000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
     }
+}

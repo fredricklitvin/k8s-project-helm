@@ -9,16 +9,80 @@
     <p>The backend status will appear here:</p>
     <pre id="backend-status"></pre>
 
+    <h2>Add a New Name</h2>
+    <form id="add-name-form">
+        <label for="new-name">Name:</label>
+        <input type="text" id="new-name" name="new-name" required>
+        <button type="submit">Add Name</button>
+    </form>
+
+    <h2>List of Names</h2>
+    <ul id="names-list"></ul>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('http://localhost:5000')
+            const backendStatusElement = document.getElementById('backend-status');
+            const addNameForm = document.getElementById('add-name-form');
+            const namesListElement = document.getElementById('names-list');
+
+            // Function to fetch and display the list of names
+            function fetchNames() {
+                fetch('/names')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.names) {
+                            namesListElement.innerHTML = ''; // Clear previous list
+                            data.names.forEach(name => {
+                                const li = document.createElement('li');
+                                li.textContent = name;
+                                namesListElement.appendChild(li);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching names:', error);
+                        namesListElement.innerHTML = '<li>Error fetching names.</li>';
+                    });
+            }
+
+            // Fetch backend status
+            fetch('/')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('backend-status').textContent = JSON.stringify(data, null, 2);
+                    backendStatusElement.textContent = JSON.stringify(data, null, 2);
+                    if (data.status === "success") {
+                        // If backend is up, fetch the names
+                        fetchNames();
+                    }
                 })
                 .catch(error => {
-                    document.getElementById('backend-status').textContent = 'Error connecting to the backend: ' + error;
+                    backendStatusElement.textContent = 'Error connecting to the backend: ' + error;
                 });
+
+            // Handle form submission to add a new name
+            addNameForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+                const newName = document.getElementById('new-name').value;
+                
+                fetch('/add_name', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: newName })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message); // Use alert for simplicity, a modal would be better
+                    if (data.status === "success") {
+                        fetchNames(); // Refresh the list of names
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding name:', error);
+                    alert('Error adding name.');
+                });
+            });
         });
     </script>
 </body>
