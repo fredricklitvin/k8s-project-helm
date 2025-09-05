@@ -16,6 +16,8 @@ env:
   # Use the Git commit SHA as an immutable, unique tag for the Docker image.
   # This is a best practice for traceability and reproducibility.
   TAG: ${{ github.sha }}
+  # Define the version for the Workload Identity Pool and Provider
+  GCP_WIF_VERSION: v16
 
 jobs:
   build-and-push:
@@ -32,8 +34,9 @@ jobs:
       - name: Authenticate to Google Cloud (WIF)
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/225435158395/locations/global/workloadIdentityPools/github-actions-pool-v10/providers/github-actions-provider-v10'
-          service_account: 'sgithub-actions-v10@i-agility-465314-p6.iam.gserviceaccount.com'
+          # We use the new environment variable here to keep the version consistent.
+          workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-actions-pool-${{ env.GCP_WIF_VERSION }}/providers/github-actions-provider-${{ env.GCP_WIF_VERSION }}'
+          service_account: 'sgithub-actions-${{ env.GCP_WIF_VERSION }}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
 
       - name: Install gcloud
         uses: google-github-actions/setup-gcloud@v2
