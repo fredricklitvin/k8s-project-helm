@@ -106,3 +106,4 @@ if __name__ == '__main__':
     # When running in Kubernetes, the host is the service name
     # The port is the container port as defined in the deployment.
     app.run(host='0.0.0.0', port=5000)
+###
