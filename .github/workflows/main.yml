@@ -14,9 +14,9 @@ env:
   REPOSITORY: backend                 # Artifact Registry repo name
   IMAGE_NAME: test-app                # image name
   TAG: ${{ github.sha }}              # immutable tag = commit SHA
-  WIF_POOL_ID: github-actions-pool-v16
-  WIF_PROVIDER_ID: github-actions-provider-v16
-  SA_EMAIL: sgithub-actions-v16@i-agility-465314-p6.iam.gserviceaccount.com
+  WIF_POOL_ID: github-actions-pool-v17
+  WIF_PROVIDER_ID: github-actions-provider-v17
+  SA_EMAIL: sgithub-actions-v17@i-agility-465314-p6.iam.gserviceaccount.com
 
 jobs:
   build-and-push:
