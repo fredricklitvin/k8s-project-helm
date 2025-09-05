@@ -1,0 +1,13 @@
+# storageclass.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  # The name of the StorageClass is now a combination of the release name and a fixed suffix.
+  name: {{ .Release.Name }}-storage-class
+provisioner: pd.csi.storage.gke.io
+reclaimPolicy: Retain
+parameters:
+  type: pd-standard
+  replication-type: regional-pd
+  fsType: ext4
+volumeBindingMode: WaitForFirstConsumer
