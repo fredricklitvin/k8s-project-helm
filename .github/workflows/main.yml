@@ -11,9 +11,9 @@ env:
   PROJECT_ID: i-agility-465314-p6
   PROJECT_NUMBER: "225435158395"
   REGION: us-central1
-  REPOSITORY: backend                 # Artifact Registry repo name
-  IMAGE_NAME: test-app                # image name
-  TAG: ${{ github.sha }}              # immutable tag = commit SHA
+  REPOSITORY: backend             # Artifact Registry repo name
+  IMAGE_NAME: test-app              # image name
+  TAG: ${{ github.sha }}            # immutable tag = commit SHA
   WIF_POOL_ID: github-actions-pool-v17
   WIF_PROVIDER_ID: github-actions-provider-v17
   SA_EMAIL: sgithub-actions-v17@i-agility-465314-p6.iam.gserviceaccount.com
@@ -64,7 +64,7 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # we commit back to the repo
+      contents: write    # we commit back to the repo
 
     steps:
       - name: Checkout repo
@@ -91,3 +91,4 @@ jobs:
 
           git commit -m "Automated: Update image tag to ${{ github.sha }}"
           git push
+
