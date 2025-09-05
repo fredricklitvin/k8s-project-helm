@@ -7,4 +7,4 @@ database:
   dbPort: "5432"
 image:
   repository: us-central1-docker.pkg.dev/i-agility-465314-p6/backend/test-app
-  tag: "487457930bdd0f7f8cc43ffb5b39eac856f1f4e7"
+  tag: "40460c5ddba536f909eaac1f39c9ec9593ed9429"
