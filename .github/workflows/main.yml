@@ -1,87 +1,93 @@
-name: Push to Artifact Registry
+name: Push to Artifact Registry & Update Helm
 
 on:
   push:
-    # This section ensures the workflow only runs when a change is pushed to the 'main' branch
-    # and specifically to the app.py file within the 'docker-app' directory.
     branches: [ "main" ]
+    # run only when app code changes (adjust as you like)
     paths:
-      - 'docker-app/app.py'
+      - 'docker-app/**'
 
 env:
   PROJECT_ID: i-agility-465314-p6
-  REPOSITORY: backend
+  PROJECT_NUMBER: "225435158395"
   REGION: us-central1
-  IMAGE_NAME: test-app
-  # Use the Git commit SHA as an immutable, unique tag for the Docker image.
-  # This is a best practice for traceability and reproducibility.
-  TAG: ${{ github.sha }}
-  # Define the version for the Workload Identity Pool and Provider
-  GCP_WIF_VERSION: v16
+  REPOSITORY: backend                 # Artifact Registry repo name
+  IMAGE_NAME: test-app                # image name
+  TAG: ${{ github.sha }}              # immutable tag = commit SHA
+  WIF_POOL_ID: github-actions-pool-v16
+  WIF_PROVIDER_ID: github-actions-provider-v16
+  SA_EMAIL: sgithub-actions-v16@i-agility-465314-p6.iam.gserviceaccount.com
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
+      id-token: write    # REQUIRED for Workload Identity Federation
 
     steps:
       - name: Checkout repository
-        # This checks out the code to build the image.
         uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud (WIF)
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
         uses: google-github-actions/auth@v2
         with:
-          # We use the new environment variable here to keep the version consistent.
-          workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-actions-pool-${{ env.GCP_WIF_VERSION }}/providers/github-actions-provider-${{ env.GCP_WIF_VERSION }}'
-          service_account: 'sgithub-actions-${{ env.GCP_WIF_VERSION }}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
+          # IMPORTANT: provider path MUST use the PROJECT NUMBER, not project ID
+          workload_identity_provider: 'projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ env.WIF_POOL_ID }}/providers/${{ env.WIF_PROVIDER_ID }}'
+          service_account: '${{ env.SA_EMAIL }}'
 
-      - name: Install gcloud
+      - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
 
-      - name: Docker login to Artifact Registry
+      - name: Verify auth (debug)
         run: |
-          gcloud auth print-access-token | \
-          docker login -u oauth2accesstoken --password-stdin https://${{ env.REGION }}-docker.pkg.dev
+          gcloud auth list
+          gcloud artifacts repositories list --location ${{ env.REGION }}
 
-      - name: Build and tag Docker image
+      - name: Configure Docker to use gcloud as a credential helper
         run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} docker-app/.
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      - name: Push Docker image to Artifact Registry
+      - name: Build image
+        run: |
+          docker build \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} \
+            docker-app
+
+      - name: Push image
         run: |
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
 
   update-helm-chart:
-    # This job only runs after the build-and-push job has completed successfully.
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
-      # We need write permissions to push the change back to the Git repository.
-      contents: write
+      contents: write   # we commit back to the repo
 
     steps:
-      - name: Checkout GitOps repository
-        # This checks out the repository that contains your Helm chart.
-        # This is where your ArgoCD is configured to watch for changes.
+      - name: Checkout repo
         uses: actions/checkout@v4
-      
-      - name: Update image tag in values.yaml
-        # This uses 'yq', a command-line YAML processor, to update the image tag.
-        # This is a common and reliable way to programmatically edit YAML files in a CI/CD pipeline.
+        with:
+          ref: main
+
+      - name: Install yq
+        uses: mikefarah/yq@v4.44.3
+
+      - name: Update image repo & tag in values.yaml
         run: |
-          # The image tag path in values.yaml might look something like this.
-          # We are updating the 'tag' field to be the new, unique git SHA.
-          yq e '.image.tag = "${{ github.sha }}"' -i k8s-app/values.yaml
+          # Update repo (host/repo/image) and tag
+          yq -i '.image.repository = "'${{ env.REGION }}'-docker.pkg.dev/'${{ env.PROJECT_ID }}'/'${{ env.REPOSITORY }}'/'${{ env.IMAGE_NAME }}'"' k8s-app/values.yaml
+          yq -i '.image.tag = "'${{ env.TAG }}'"' k8s-app/values.yaml
 
       - name: Commit and push changes
-        # This step commits the updated values.yaml file and pushes it back to the main branch.
-        # This is the "GitOps" part of the pipeline that ArgoCD will detect.
         run: |
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions"
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@users.noreply.github.com"
           git add k8s-app/values.yaml
+          git commit -m "ci: update image to ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}"
+          git push
+
           git commit -m "Automated: Update image tag to ${{ github.sha }}"
           git push
