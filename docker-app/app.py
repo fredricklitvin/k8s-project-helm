@@ -36,7 +36,7 @@ def setup_database():
         conn.commit()
     print("Database setup complete.")
 
-@app.before_equest
+@app.before_request
 def init_once():
     # Runs once per process (e.g., once per Gunicorn worker)
     try:
