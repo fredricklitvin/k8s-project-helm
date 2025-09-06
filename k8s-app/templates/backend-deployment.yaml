@@ -39,8 +39,8 @@ spec:
               configMapKeyRef:
                 name: {{ .Release.Name }}-configmap
                 key: POSTGRES_DB
-          # - name: DB_PORT
-          #   valueFrom:
-          #     configMapKeyRef:
-          #       name: configmap
-          #       key: DB_PORT
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-configmap
+                key: DB_PORT
