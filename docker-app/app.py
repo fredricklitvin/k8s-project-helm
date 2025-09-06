@@ -7,11 +7,12 @@ app = Flask(__name__)
 CORS(app)
 
 # Database connection details
-DB_USER = os.environ.get('DB_USER', 'postgres')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', 'mysecretpassword')
-DB_HOST = os.environ.get('DB_HOST', 'postgres-service') # Use the Kubernetes service name
-DB_NAME = os.environ.get('DB_NAME', 'postgres')
-DB_PORT = os.environ.get('DB_PORT', '5432')
+DB_USER = os.environ.get('POSTGRES_USER')
+DB_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
+# This must come from the environment variable set by the configmap
+DB_HOST = os.environ.get('DB_HOST')
+DB_NAME = os.environ.get('POSTGRES_DB')
+DB_PORT = os.environ.get('DB_PORT')
 
 # Function to create the 'names' table if it doesn't exist
 def setup_database():
@@ -34,14 +35,19 @@ def setup_database():
         cur.close()
         conn.close()
         print("Database setup complete.")
+        return True
     except Exception as e:
         print(f"Error setting up database: {e}")
-
-# Call the setup function when the application starts
-setup_database()
+        return False
 
 @app.route('/')
 def home():
+    # Attempt to set up the database and return a status
+    # The init container in the deployment ensures the database is available
+    # before the app starts, so this should succeed.
+    if not setup_database():
+        return jsonify({"status": "error", "message": "Failed to set up the database."}), 500
+
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -103,7 +109,5 @@ def add_name():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    # When running in Kubernetes, the host is the service name
     # The port is the container port as defined in the deployment.
     app.run(host='0.0.0.0', port=5000)
-####test10
