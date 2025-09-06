@@ -14,72 +14,68 @@ DB_HOST = os.environ.get('DB_HOST')
 DB_NAME = os.environ.get('DB_NAME')
 DB_PORT = os.environ.get('DB_PORT')
 
-# Function to create the 'names' table if it doesn't exist
+def get_conn():
+    return psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        port=DB_PORT,
+    )
+
+# Create the 'names' table if it doesn't exist
 def setup_database():
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT
-        )
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS names (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL
-            );
-        """)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS public.names (
+                    id   SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL
+                );
+            """)
         conn.commit()
-        cur.close()
-        conn.close()
-        print("Database setup complete.")
-        return True
+    print("Database setup complete.")
+
+@app.before_first_request
+def init_once():
+    # Runs once per process (e.g., once per Gunicorn worker)
+    try:
+        # Basic sanity check for missing env vars
+        missing = [k for k, v in {
+            "POSTGRES_USER": DB_USER,
+            "POSTGRES_PASSWORD": DB_PASSWORD,
+            "DB_HOST": DB_HOST,
+            "POSTGRES_DB": DB_NAME,
+            "DB_PORT": DB_PORT,
+        }.items() if not v]
+        if missing:
+            raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
+
+        setup_database()
     except Exception as e:
-        print(f"Error setting up database: {e}")
-        return False
+        # If startup init fails, log it clearly. Requests will still return JSON errors.
+        print(f"Startup DB init failed: {e}")
 
 @app.route('/')
 def home():
-    # Attempt to set up the database and return a status
-    # The init container in the deployment ensures the database is available
-    # before the app starts, so this should succeed.
-    if not setup_database():
-        return jsonify({"status": "error", "message": "Failed to set up the database."}), 500
-
     try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT
-        )
-        cur = conn.cursor()
-        cur.execute("SELECT version();")
-        db_version = cur.fetchone()[0]
-        cur.close()
-        conn.close()
-        return jsonify({"status": "success", "message": "Backend is running and connected to the database!", "db_version": db_version})
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT version();")
+                db_version = cur.fetchone()[0]
+        return jsonify({"status": "success",
+                        "message": "Backend is running and connected to the database!",
+                        "db_version": db_version})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/names', methods=['GET'])
 def list_names():
     try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT
-        )
-        cur = conn.cursor()
-        cur.execute("SELECT name FROM names;")
-        names = [row[0] for row in cur.fetchall()]
-        cur.close()
-        conn.close()
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT name FROM public.names;")
+                names = [row[0] for row in cur.fetchall()]
         return jsonify({"names": names})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -87,27 +83,18 @@ def list_names():
 @app.route('/add_name', methods=['POST'])
 def add_name():
     try:
-        data = request.get_json()
-        new_name = data.get('name')
+        data = request.get_json(force=True, silent=False)
+        new_name = (data or {}).get('name')
         if not new_name:
             return jsonify({"status": "error", "message": "Name is required"}), 400
 
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT
-        )
-        cur = conn.cursor()
-        cur.execute("INSERT INTO names (name) VALUES (%s);", (new_name,))
-        conn.commit()
-        cur.close()
-        conn.close()
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("INSERT INTO public.names (name) VALUES (%s);", (new_name,))
+            conn.commit()
         return jsonify({"status": "success", "message": f"Name '{new_name}' added successfully."}), 201
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    # The port is the container port as defined in the deployment.
     app.run(host='0.0.0.0', port=5000)
