@@ -34,15 +34,15 @@ spec:
             # The volumeMount now points to a new parent directory.
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
-volumeClaimTemplates:
-  - metadata:
-      # The name here must match the `volumeMounts.name` above.
-      # This is the key to connecting the Pod's volume to the dynamic claim.
-      name: postgres-storage
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      storageClassName: {{ .Release.Name }}-storage-class
-      resources:
-        requests:
-          # This value is now configurable in your values.yaml file.
-          storage: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        # The name here must match the `volumeMounts.name` above.
+        # This is the key to connecting the Pod's volume to the dynamic claim.
+        name: postgres-storage
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: {{ .Release.Name }}-storage-class
+        resources:
+          requests:
+            # This value is now configurable in your values.yaml file.
+            storage: 1Gi
