@@ -7,6 +7,6 @@ database:
   dbPort: "5432"
 image:
   repository: us-central1-docker.pkg.dev/i-agility-465314-p6/backend/test-app
-  tag: "791ccb775ca703ea8a55b69935bf051fd6274ea1"
+  tag: "28b33192583d5081cfcec7e37275ee1fc2e43bb6"
 pvcCapacity: 10Gi
 pvCapacity: 10Gi
