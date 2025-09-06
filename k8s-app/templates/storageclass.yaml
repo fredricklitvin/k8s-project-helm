@@ -1,13 +1,18 @@
-# storageclass.yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  # The name of the StorageClass is now a combination of the release name and a fixed suffix.
+  # The name of the StorageClass must match the name used in your
+  # StatefulSet's `volumeClaimTemplates`.
   name: {{ .Release.Name }}-storage-class
+# The provisioner tells Kubernetes what kind of storage to use.
+# For GKE, this is the Persistent Disk CSI driver.
 provisioner: pd.csi.storage.gke.io
-reclaimPolicy: Retain
 parameters:
-  type: pd-standard
-  replication-type: regional-pd
-  fsType: ext4
+  # 'pd-balanced' is a valid disk type for GKE.
+  type: pd-balanced
+# The reclaim policy determines what happens to the volume when the PVC is deleted.
+# "Retain" means the volume is kept, which is a good practice for databases to prevent accidental data loss.
+reclaimPolicy: Retain
+# `volumeBindingMode` is set to `Immediate` to fix the scheduling deadlock.
+# This ensures the volume is provisioned as soon as the claim is created.
 volumeBindingMode: Immediate
