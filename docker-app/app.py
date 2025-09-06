@@ -8,7 +8,7 @@ CORS(app)
 
 # Database connection details
 DB_USER = os.environ.get('POSTGRES_USER')
-DB_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
 # This must come from the environment variable set by the configmap
 DB_HOST = os.environ.get('DB_HOST')
 DB_NAME = os.environ.get('POSTGRES_DB')
