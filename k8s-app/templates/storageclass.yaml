@@ -10,4 +10,4 @@ parameters:
   type: pd-standard
   replication-type: regional-pd
   fsType: ext4
-volumeBindingMode: WaitForFirstConsumer
+volumeBindingMode: Immediate
